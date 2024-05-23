@@ -12,17 +12,13 @@ setup(
     long_description_content_type="text/markdown",
     author_email="marcomesquitajr@hotmail.com",
     keywords=[
+        "python whatsapp",
         "bot whatsapp unofficial",
         "connector whatsapp unofficial",
         "automation whatsapp unofficial",
     ],
     description="conector para envio e leitura de mensagem no whatsapp não oficial do whatsapp",
-    packages=[
-        "selenium",
-        "webdriver-manager",
-        "PyQRCode",
-        "pillow",
-    ],
+    packages=["bot"],
     install_requires=[
         "selenium",
         "webdriver-manager",

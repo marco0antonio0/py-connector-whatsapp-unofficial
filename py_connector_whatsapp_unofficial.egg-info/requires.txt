@@ -1,0 +1,4 @@
+PyQRCode
+pillow
+selenium
+webdriver-manager
