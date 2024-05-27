@@ -88,6 +88,7 @@ To use this bot, follow these steps:
 
 ## Project Structure
 
+```yaml
 py-connector-whatsapp-unofficial/
 │
 ├── bot.py # Main bot class and functionalities
@@ -95,6 +96,7 @@ py-connector-whatsapp-unofficial/
 ├── requirements.txt # List of dependencies
 ├── README.md # Project documentation
 └── dados/ # Directory to store session data
+```
 
 ## Contributing
 
