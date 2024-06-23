@@ -19,6 +19,9 @@ To use this bot, follow these steps:
 
     ```bash
     git clone https://github.com/marco0antonio0/py-connector-whatsapp-unofficial
+    ```
+
+    ```bash
     cd py-connector-whatsapp-unofficial
     ```
 
@@ -52,10 +55,10 @@ To use this bot, follow these steps:
 1. **Initialize the Bot**:
 
     ```python
-    from bot import botWhatsapp
+    from services import automation
     # with interface = true
     #without interface = false // terminal acess
-    bot = botWhatsapp(gui=False)
+    bot = automation(gui=False)
     ```
 
 2. **Start the Bot**:
