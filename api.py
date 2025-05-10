@@ -82,31 +82,42 @@ def send_message():
 
     data = request.get_json()
     contato = data.get("contato")
-    mensagem = data.get("mensagem")
+    mensagens = data.get("mensagens")
 
-    if not contato or not mensagem:
+    if not contato or not mensagens:
         return jsonify({
             "status": "erro",
-            "mensagem": "Contato e mensagem são obrigatórios."
+            "mensagem": "Contato e mensagens são obrigatórios."
+        }), 400
+
+    if not isinstance(mensagens, list):
+        return jsonify({
+            "status": "erro",
+            "mensagem": "O campo 'mensagens' deve ser uma lista de strings."
         }), 400
 
     try:
         bot_instance.searchExistsContactAndOpen(contato)
-        bot_instance.enviar_mensagem_para_contato_aberto(mensagem)
-        mensagens = bot_instance.pegar_todas_mensagens()
+
+        for mensagem in mensagens:
+            if isinstance(mensagem, str) and mensagem.strip():
+                bot_instance.enviar_mensagem_para_contato_aberto(mensagem)
+                time.sleep(1)  # pequena pausa entre mensagens (ajustável)
+
+        historico = bot_instance.pegar_todas_mensagens()
         bot_instance.go_to_home()
 
         return jsonify({
             "status": "sucesso",
-            "mensagem": f"Mensagem enviada para {contato}.",
+            "mensagem": f"{len(mensagens)} mensagem(ns) enviada(s) para {contato}.",
             "dados": {
-                "historico_mensagens": mensagens
+                "historico_mensagens": historico
             }
         }), 200
     except Exception as e:
         return jsonify({
             "status": "erro",
-            "mensagem": "Erro ao enviar mensagem.",
+            "mensagem": "Erro ao enviar mensagens.",
             "erro": str(e)
         }), 500
 
