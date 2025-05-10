@@ -62,9 +62,10 @@ paths:
 
   /send:
     post:
-      summary: Envia mensagem para um contato
+      summary: Envia uma ou mais mensagens para um contato
       description: >
-        Pesquisa e abre a conversa com o contato informado, envia a mensagem e retorna o histórico após envio.
+        Pesquisa e abre a conversa com o contato informado, envia uma ou mais mensagens em sequência
+        e retorna o histórico da conversa após o envio.
       parameters:
         - in: body
           name: body
@@ -73,17 +74,22 @@ paths:
             type: object
             required:
               - contato
-              - mensagem
+              - mensagens
             properties:
               contato:
                 type: string
                 example: "marco antonio"
-              mensagem:
-                type: string
-                example: "Olá, tudo bem?"
+              mensagens:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "Olá, tudo bem?"
+                  - "Esta é a segunda mensagem."
+                  - "Mensagem final do teste."
       responses:
         200:
-          description: Mensagem enviada com sucesso.
+          description: Mensagens enviadas com sucesso.
           schema:
             type: object
             properties:
@@ -101,7 +107,7 @@ paths:
         400:
           description: Dados inválidos ou bot inativo.
         500:
-          description: Erro ao enviar mensagem.
+          description: Erro ao enviar mensagens.
 
   /history/{contato}:
     get:

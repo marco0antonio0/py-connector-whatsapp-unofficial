@@ -4,3 +4,5 @@ PyQRCode==1.2.1
 openpyxl==3.1.2
 pillow==10.3.0
 requests==2.31.0
+Flask==3.1.0
+flasgger==0.9.7.1
