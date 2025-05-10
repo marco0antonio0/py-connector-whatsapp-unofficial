@@ -40,7 +40,38 @@ This project is a WhatsApp automation bot developed using **Selenium WebDriver**
    chmod +x install.sh
    ./install.sh
    ```
+    🔧 What ./install.sh does:
 
+    This script automates the entire setup needed for the bot to work correctly with Google Chrome and its compatible ChromeDriver.
+
+    📋 Steps performed:
+
+    1. Checks if Google Chrome is installed:
+    - If not, the script downloads the .deb package directly from Google's official website.
+    - Then it automatically installs Chrome using apt.
+
+    2. Detects the installed version of Google Chrome:
+    - The script runs google-chrome --version and extracts the exact version to ensure compatibility with ChromeDriver.
+
+    3. Builds the official ChromeDriver download URL:
+    - Based on the detected Chrome version, it generates a direct download link from Google's server:
+        https://storage.googleapis.com/chrome-for-testing-public/<version>/linux64/chromedriver-linux64.zip
+
+    4. Creates the ./chromeDrive directory:
+    - All ChromeDriver files will be extracted and stored in this directory, used by the automation.
+
+    5. Downloads and extracts ChromeDriver:
+    - The .zip file is downloaded silently.
+    - Its contents are extracted and moved into ./chromeDrive.
+
+    6. Removes temporary files:
+    - Automatically cleans up the downloaded .zip file and any auxiliary folders to keep the workspace clean.
+
+    ✅ Result:
+    After running ./install.sh, your environment will be ready with:
+    - Google Chrome installed (if it wasn’t already).
+    - The ChromeDriver matching the installed Chrome version, located in ./chromeDrive/.
+    - Everything ready to run your Selenium-based automation.
 4. **Start the Bot**:
 
    ```bash
@@ -142,6 +173,37 @@ Este projeto é um bot de automação do WhatsApp desenvolvido com **Selenium We
    chmod +x install.sh
    ./install.sh
    ```
+   🔧 O que o ./install.sh faz:
+
+    Este script automatiza toda a configuração necessária para que o bot funcione corretamente com o Google Chrome e o ChromeDriver compatíveis.
+
+    📋 Etapas executadas:
+
+    1. Verifica se o Google Chrome está instalado:
+    - Caso não esteja, o script baixa o pacote .deb do Chrome diretamente do site oficial do Google.
+    - Em seguida, ele instala automaticamente o navegador via apt.
+
+    2. Detecta a versão instalada do Google Chrome:
+    - O script executa google-chrome --version e extrai a versão exata instalada para garantir compatibilidade com o ChromeDriver.
+
+    3. Monta a URL de download do ChromeDriver oficial:
+    - Com base na versão instalada do Chrome, é gerada uma URL personalizada de download direto do servidor do Google:
+        https://storage.googleapis.com/chrome-for-testing-public/<versão>/linux64/chromedriver-linux64.zip
+
+    4. Cria o diretório ./chromeDrive:
+    - Todos os arquivos extraídos do ChromeDriver serão armazenados neste diretório, usado pela automação.
+
+    5. Baixa e extrai o ChromeDriver:
+    - O .zip é baixado silenciosamente.
+    - O conteúdo é extraído e movido diretamente para a pasta ./chromeDrive.
+
+    6. Remove arquivos temporários:
+    - Limpeza automática do .zip baixado e das pastas auxiliares para manter o ambiente limpo.
+
+    ✅ Resultado:
+    Após rodar ./install.sh, seu ambiente estará preparado com:
+    - Google Chrome instalado (caso não estivesse).
+    - ChromeDriver correspondente à versão do Chrome, localizado em ./chromeDrive/.
 
 4. **Inicie o Bot**:
 
