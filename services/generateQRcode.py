@@ -1,13 +1,8 @@
-import pyqrcode
-
+import segno
 
 def createQRCODE(text):
     try:
-
-        # Criar o QR code
-        qr_code = pyqrcode.create(text, error="L")
-
-        # Exibir o QR code no terminal
-        print(qr_code.terminal(module_color="black", background="white", quiet_zone=4))
-    except:
-        print("codigo qrcode não encontrado")
+        qr = segno.make(text, error='L')
+        qr.terminal(compact=True, border=1)
+    except Exception as e:
+        print(f"Erro ao gerar QR code: {e}")

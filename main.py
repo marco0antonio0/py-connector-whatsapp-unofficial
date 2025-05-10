@@ -1,25 +1,56 @@
-from services import automation
+from services.bot.bot import automation
+import time
 
-# ======================================================
-#        this is the guide for use the code
-# ======================================================
-
-# create instance
-instance = automation(gui=False)
-
-# start process
+# ==============================
+#   INICIALIZAÇÃO DO BOT
+# ==============================
+instance = automation(gui=True)
 instance.start()
 
-# loop the checking if having the new messages
-while True:
-    # check if new message exists
-    newIdUser = instance.VerificarNovaMensagem()
-    # if case exist
-    if newIdUser:
-        # so aplly an return last message of the contact
-        lastMessage = instance.pegar_ultima_mensagem()
-        # show last messagen
-        print(lastMessage)
+print("=" * 55)
+print("               ✅ Logado com sucesso")
+print("=" * 55)
+print("               🤖 Sistema Iniciado")
+print("=" * 55)
 
-    # this is necessary for got back the homescreen page
-    instance.go_to_home()
+# Contatos já notificados
+contatosEncontrados = set()
+
+# Lista de contatos permitidos (vazia = todos permitidos)
+listaPermitidos = []
+
+# ==============================
+#      LOOP PRINCIPAL
+# ==============================
+while True:
+    # Verifica se há novas mensagens
+    novos_contatos = instance.VerificarNovaMensagem()
+
+    for contato in novos_contatos:
+        if contato not in contatosEncontrados:
+            print(f"📨 Nova mensagem de: {contato}")
+            contatosEncontrados.add(contato)
+
+    if novos_contatos and (not listaPermitidos or any(c in novos_contatos for c in listaPermitidos)):
+        for contato in list(contatosEncontrados):
+            if contato == "Marco Antonio":  # <- pode ser dinamizado no futuro
+                print("📨 Marco mandou mensagem")
+
+                try:
+                    instance.searchExistsContactAndOpen(contato)
+                    history = instance.pegar_todas_mensagens()
+
+                    success = instance.enviar_mensagem_para_contato_aberto("ola essa e uma mensagem de teste")
+                    print(history)
+
+                    if success:
+                        contatosEncontrados.remove(contato)
+
+                except Exception as e:
+                    print(f"❌ Erro: {e}")
+
+                finally:
+                    instance.go_to_home()
+
+    # Aguarda 3 segundos antes da próxima verificação
+    time.sleep(3)

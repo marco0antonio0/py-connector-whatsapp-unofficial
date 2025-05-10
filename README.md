@@ -25,11 +25,19 @@ To use this bot, follow these steps:
     cd py-connector-whatsapp-unofficial
     ```
 
-2. **Install Dependencies**:
+2. **Install Dependencies and ChromeDriver GoogleChrome**:
     Ensure you have Python installed. Then install the required Python packages:
 
     ```bash
     pip install selenium webdriver-manager pillow
+    ```
+
+    Get obtain and install google chrome if not exist and obtain chromeDriver 
+    ```bash
+    # permission for execute script
+    chmod +x install.sh
+    # execute script for install requirements google and googleDriveBinary
+    ./install.sh
     ```
 
 3. **Start the code of the path main:**
