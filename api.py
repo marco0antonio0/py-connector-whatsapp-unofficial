@@ -1,185 +1,180 @@
-from flask import Flask, request, jsonify,send_from_directory
-from threading import Thread
+from flask import Flask, request, jsonify, send_from_directory
+from threading import Thread, Event
+from queue import Queue
 import threading
-from services.bot.bot import automation
 import time
+import uuid
+import qrcode
+import os
 from flasgger import Swagger
 from flasgger.utils import swag_from
-import qrcode
-import uuid
-import os
+from services.bot.bot import automation
 
 app = Flask(__name__)
 swagger = Swagger(app, template_file='swagger.yml')
 
-
-bot_thread = None
+# Estados globais
 bot_instance = None
 running = False
 
-def bot_loop():
-    global running, bot_instance
-    if bot_instance is None:
+# Fila de tarefas
+task_queue = Queue()
+
+# Worker que processa uma tarefa por vez
+def worker_loop():
+    """
+    Worker responsável por processar requisições da fila uma por vez.
+    Utiliza app_context para manter o contexto da aplicação Flask ativo.
+    """
+    with app.app_context():
+        while True:
+            func, event, result_container = task_queue.get()
+            try:
+                result_container['response'] = func()
+            except Exception as e:
+                result_container['response'] = jsonify({"erro": str(e)}), 500
+            finally:
+                event.set()
+
+# Inicia o worker
+worker_thread = Thread(target=worker_loop, daemon=True)
+worker_thread.start()
+
+@app.route('/start', methods=['POST'])
+@swag_from('swagger.yml', endpoint='/start', methods=['POST'])
+def start_bot():
+    """
+    Inicia o bot WhatsApp.
+    - Retorna erro se já estiver em execução.
+    - Caso contrário, instancia e inicializa.
+    """
+    global bot_instance, running
+
+    def task():
+        global bot_instance, running
+        if bot_instance:
+            return jsonify({"status": "erro", "mensagem": "Bot já está em execução."}), 400
         bot_instance = automation(gui=False)
-    else:
-        print("⚠️ Bot já iniciado.")
-        return
+        running = True
+        bot_instance.start_api()
+        print("🤖 Bot iniciado com sucesso!")
+        return jsonify({"status": "sucesso", "mensagem": "Bot iniciado com sucesso."}), 200
 
-    running = True
-    bot_instance.start_api()
-    print("🤖 Bot iniciado com sucesso!")
-
-    while running:
-        time.sleep(1)
-
+    event = Event()
+    result = {}
+    task_queue.put((task, event, result))
+    event.wait()
+    return result['response']
 
 @app.route('/login', methods=['POST'])
+@swag_from('swagger.yml', endpoint='/login', methods=['POST'])
 def login_bot():
-    global bot_thread, bot_instance, running
+    """
+    Realiza o processo de login no WhatsApp Web.
+    - Se já estiver logado, retorna status.
+    - Caso contrário, gera e retorna QRCode temporário.
+    """
+    global bot_instance
 
-    # print("🔄 Rota /login acionada")
+    host_url = request.host_url.rstrip("/")
 
-    if bot_instance:
-        # print("✅ bot_instance existe")
-        try:
-            # print("➡️ Acessando a tela inicial do WhatsApp Web...")
-            bot_instance.go_to_home()
-            time.sleep(10)
-            # print("⏳ Verificando se já está logado...")
+    def task():
+        if bot_instance:
+            try:
+                bot_instance.go_to_home()
+                time.sleep(10)
 
-            if bot_instance.checkIsLogin():
-                # print("✅ Bot já está logado")
-                return jsonify({
-                    "status": "logado",
-                    "mensagem": "Bot já está logado no WhatsApp Web."
-                }), 200
-            else:
-                # print("⚠️ Bot não está logado, gerando QRCode...")
+                if bot_instance.checkIsLogin():
+                    return jsonify({"status": "logado", "mensagem": "Bot já está logado no WhatsApp Web."}), 200
+
                 qr_data = bot_instance.getDataRef()
                 img_name = f"{uuid.uuid4().hex}.png"
                 img_path = os.path.join("static", "qrcodes", img_name)
 
-                # print(f"📦 Salvando QRCode em: {img_path}")
-                qr_img = qrcode.make(qr_data)
-                qr_img.save(img_path)
+                qrcode.make(qr_data).save(img_path)
 
-                # print("⏲️ Iniciando temporizador para remover QRCode em 2 minutos")
                 threading.Timer(120, lambda: os.remove(img_path) if os.path.exists(img_path) else None).start()
-
-                full_url = request.host_url.rstrip("/") + f"/qrcode/{img_name}"
-                # print(f"📤 QRCode disponível em: {full_url}")
+                full_url = f"{host_url}/qrcode/{img_name}"
 
                 return jsonify({
                     "status": "aguardando_login",
                     "mensagem": "Bot em execução aguardando leitura do QRCode.",
                     "qrCodeUrl": full_url
                 }), 200
-
-        except Exception as e:
-            # print(f"❌ Erro ao verificar login: {e}")
+            except Exception as e:
+                return jsonify({
+                    "status": "erro",
+                    "mensagem": "Erro ao verificar login.",
+                    "erro": str(e)
+                }), 500
+        else:
             return jsonify({
                 "status": "erro",
-                "mensagem": "Erro ao verificar login.",
-                "erro": str(e)
-            }), 500
+                "mensagem": "Bot ainda não foi iniciado. Use a rota /start."
+            }), 400
 
-    else:
-        # print("❌ bot_instance está None — o bot não foi iniciado")
-        return jsonify({
-            "status": "erro",
-            "mensagem": "Bot ainda não foi iniciado. Use a rota /start ou inicialize o bot."
-        }), 400
-
-
-@app.route('/start', methods=['POST'])
-@swag_from('swagger.yml', endpoint='/start', methods=['POST'])
-def start_bot():
-    global bot_instance, running
-
-    if bot_instance:
-        return jsonify({
-            "status": "erro",
-            "mensagem": "Bot já está em execução."
-        }), 400
-
-    try:
-        bot_instance = automation(gui=False)
-        running = True
-        bot_instance.start_api()
-        print("🤖 Bot iniciado com sucesso!")
-
-        return jsonify({
-            "status": "sucesso",
-            "mensagem": "Bot iniciado com sucesso."
-        }), 200
-    except Exception as e:
-        return jsonify({
-            "status": "erro",
-            "mensagem": "Erro ao iniciar o bot.",
-            "erro": str(e)
-        }), 500
+    event = Event()
+    result = {}
+    task_queue.put((task, event, result))
+    event.wait()
+    return result['response']
 
 @app.route('/qrcode/<filename>')
 def serve_qrcode(filename):
+    """
+    Serve arquivos de imagem QRCode gerados no login.
+    """
     return send_from_directory('static/qrcodes', filename)
 
 @app.route('/status', methods=['GET'])
 @swag_from('swagger.yml', endpoint='/status', methods=['GET'])
 def bot_status():
-    if bot_instance is None:
-        return jsonify({
-            "status": "desligado",
-            "logado": False,
-            "mensagem": "Bot não está em execução."
-        }), 200
+    """
+    Retorna o status atual do bot e se está logado no WhatsApp.
+    """
+    global bot_instance
 
-    try:
-        is_logged = bot_instance.checkIsLogin()
-        return jsonify({
-            "status": "ligado",
-            "logado": bool(is_logged),
-            "mensagem": "Status do bot obtido com sucesso."
-        }), 200
-    except Exception as e:
-        return jsonify({
-            "status": "ligado",
-            "logado": False,
-            "mensagem": "Erro ao verificar status do bot.",
-            "erro": str(e)
-        }), 500
+    def task():
+        if bot_instance is None:
+            return jsonify({"status": "desligado", "logado": False, "mensagem": "Bot não está em execução."}), 200
+
+        try:
+            is_logged = bot_instance.checkIsLogin()
+            return jsonify({"status": "ligado", "logado": bool(is_logged), "mensagem": "Status do bot obtido com sucesso."}), 200
+        except Exception as e:
+            return jsonify({"status": "ligado", "logado": False, "mensagem": "Erro ao verificar status do bot.", "erro": str(e)}), 500
+
+    event = Event()
+    result = {}
+    task_queue.put((task, event, result))
+    event.wait()
+    return result['response']
 
 @app.route('/send', methods=['POST'])
 @swag_from('swagger.yml', endpoint='/send', methods=['POST'])
 def send_message():
-    if bot_instance is None:
-        return jsonify({
-            "status": "erro",
-            "mensagem": "Bot não está ativo."
-        }), 400
+    """
+    Envia uma lista de mensagens para um contato do WhatsApp.
+    """
+    global bot_instance
 
     data = request.get_json()
     contato = data.get("contato")
     mensagens = data.get("mensagens")
 
-    if not contato or not mensagens:
+    if not contato or not mensagens or not isinstance(mensagens, list):
         return jsonify({
             "status": "erro",
-            "mensagem": "Contato e mensagens são obrigatórios."
+            "mensagem": "Contato e mensagens são obrigatórios e devem estar no formato correto."
         }), 400
 
-    if not isinstance(mensagens, list):
-        return jsonify({
-            "status": "erro",
-            "mensagem": "O campo 'mensagens' deve ser uma lista de strings."
-        }), 400
-
-    try:
+    def task():
         bot_instance.searchExistsContactAndOpen(contato)
 
         for mensagem in mensagens:
             if isinstance(mensagem, str) and mensagem.strip():
                 bot_instance.enviar_mensagem_para_contato_aberto(mensagem)
-                time.sleep(1)  
+                time.sleep(1)
 
         historico = bot_instance.pegar_todas_mensagens()
         bot_instance.go_to_home()
@@ -191,26 +186,29 @@ def send_message():
                 "historico_mensagens": historico
             }
         }), 200
-    except Exception as e:
-        return jsonify({
-            "status": "erro",
-            "mensagem": "Erro ao enviar mensagens.",
-            "erro": str(e)
-        }), 500
+
+    event = Event()
+    result = {}
+    task_queue.put((task, event, result))
+    event.wait()
+    return result['response']
 
 @app.route('/history/<contato>', methods=['GET'])
 @swag_from('swagger.yml', endpoint='/history/{contato}', methods=['GET'])
 def get_history(contato):
-    if bot_instance is None:
-        return jsonify({
-            "status": "erro",
-            "mensagem": "Bot não está ativo."
-        }), 400
+    """
+    Obtém todas as mensagens trocadas com um contato específico.
+    """
+    global bot_instance
 
-    try:
+    def task():
+        if bot_instance is None:
+            return jsonify({"status": "erro", "mensagem": "Bot não está ativo."}), 400
+
         bot_instance.searchExistsContactAndOpen(contato)
         mensagens = bot_instance.pegar_todas_mensagens()
         bot_instance.go_to_home()
+
         return jsonify({
             "status": "sucesso",
             "mensagem": f"Mensagens recuperadas para {contato}.",
@@ -218,26 +216,38 @@ def get_history(contato):
                 "mensagens": mensagens
             }
         }), 200
-    except Exception as e:
-        return jsonify({
-            "status": "erro",
-            "mensagem": "Erro ao buscar histórico.",
-            "erro": str(e)
-        }), 500
+
+    event = Event()
+    result = {}
+    task_queue.put((task, event, result))
+    event.wait()
+    return result['response']
 
 @app.route('/stop', methods=['POST'])
 @swag_from('swagger.yml', endpoint='/stop', methods=['POST'])
 def stop_bot():
+    """
+    Finaliza o bot e encerra a instância atual.
+    """
     global running, bot_instance
-    running = False
-    if bot_instance:
-        bot_instance.exit()
-        print("🛑 Bot encerrado.")
-        bot_instance = None
-    return jsonify({
-        "status": "sucesso",
-        "mensagem": "Bot finalizado com sucesso."
-    }), 200
+
+    def task():
+        global bot_instance, running
+        running = False
+        if bot_instance:
+            bot_instance.exit()
+            print("🛑 Bot encerrado.")
+            bot_instance = None
+        return jsonify({
+            "status": "sucesso",
+            "mensagem": "Bot finalizado com sucesso."
+        }), 200
+
+    event = Event()
+    result = {}
+    task_queue.put((task, event, result))
+    event.wait()
+    return result['response']
 
 if __name__ == '__main__':
-    app.run(debug=False,port=3000)
+    app.run(debug=False, port=3000)
