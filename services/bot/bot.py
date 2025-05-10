@@ -7,6 +7,7 @@ from .services.getDataRef import getDataRef
 from .services.login import login
 from .services.checkIsLogin import checkIsLogin
 from .services.start import start
+from .services.start_api import start_api
 from .services.go_to_home import go_to_home
 from .services.openImage import openImage
 from .services.searchExistsContactAndOpen import searchExistsContactAndOpen
@@ -60,6 +61,10 @@ class automation:
     def start(self):
         """Inicia o processo de login e validação."""
         start(self)
+
+    def start_api(self):
+        """Inicia para api"""
+        start_api(self)
 
     def go_to_home(self):
         """Navega para a tela principal do WhatsApp Web."""

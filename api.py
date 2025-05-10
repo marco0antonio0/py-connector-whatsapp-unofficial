@@ -1,9 +1,13 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,send_from_directory
 from threading import Thread
+import threading
 from services.bot.bot import automation
 import time
 from flasgger import Swagger
 from flasgger.utils import swag_from
+import qrcode
+import uuid
+import os
 
 app = Flask(__name__)
 swagger = Swagger(app, template_file='swagger.yml')
@@ -22,29 +26,102 @@ def bot_loop():
         return
 
     running = True
-    bot_instance.start()
+    bot_instance.start_api()
     print("🤖 Bot iniciado com sucesso!")
 
     while running:
         time.sleep(1)
 
+
+@app.route('/login', methods=['POST'])
+def login_bot():
+    global bot_thread, bot_instance, running
+
+    # print("🔄 Rota /login acionada")
+
+    if bot_instance:
+        # print("✅ bot_instance existe")
+        try:
+            # print("➡️ Acessando a tela inicial do WhatsApp Web...")
+            bot_instance.go_to_home()
+            time.sleep(10)
+            # print("⏳ Verificando se já está logado...")
+
+            if bot_instance.checkIsLogin():
+                # print("✅ Bot já está logado")
+                return jsonify({
+                    "status": "logado",
+                    "mensagem": "Bot já está logado no WhatsApp Web."
+                }), 200
+            else:
+                # print("⚠️ Bot não está logado, gerando QRCode...")
+                qr_data = bot_instance.getDataRef()
+                img_name = f"{uuid.uuid4().hex}.png"
+                img_path = os.path.join("static", "qrcodes", img_name)
+
+                # print(f"📦 Salvando QRCode em: {img_path}")
+                qr_img = qrcode.make(qr_data)
+                qr_img.save(img_path)
+
+                # print("⏲️ Iniciando temporizador para remover QRCode em 2 minutos")
+                threading.Timer(120, lambda: os.remove(img_path) if os.path.exists(img_path) else None).start()
+
+                full_url = request.host_url.rstrip("/") + f"/qrcode/{img_name}"
+                # print(f"📤 QRCode disponível em: {full_url}")
+
+                return jsonify({
+                    "status": "aguardando_login",
+                    "mensagem": "Bot em execução aguardando leitura do QRCode.",
+                    "qrCodeUrl": full_url
+                }), 200
+
+        except Exception as e:
+            # print(f"❌ Erro ao verificar login: {e}")
+            return jsonify({
+                "status": "erro",
+                "mensagem": "Erro ao verificar login.",
+                "erro": str(e)
+            }), 500
+
+    else:
+        # print("❌ bot_instance está None — o bot não foi iniciado")
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Bot ainda não foi iniciado. Use a rota /start ou inicialize o bot."
+        }), 400
+
+
 @app.route('/start', methods=['POST'])
 @swag_from('swagger.yml', endpoint='/start', methods=['POST'])
 def start_bot():
-    global bot_thread, running
+    global bot_instance, running
 
-    if bot_thread and bot_thread.is_alive():
+    if bot_instance:
         return jsonify({
             "status": "erro",
             "mensagem": "Bot já está em execução."
         }), 400
 
-    bot_thread = Thread(target=bot_loop)
-    bot_thread.start()
-    return jsonify({
-        "status": "sucesso",
-        "mensagem": "Bot iniciado com sucesso."
-    }), 200
+    try:
+        bot_instance = automation(gui=False)
+        running = True
+        bot_instance.start_api()
+        print("🤖 Bot iniciado com sucesso!")
+
+        return jsonify({
+            "status": "sucesso",
+            "mensagem": "Bot iniciado com sucesso."
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "erro",
+            "mensagem": "Erro ao iniciar o bot.",
+            "erro": str(e)
+        }), 500
+
+@app.route('/qrcode/<filename>')
+def serve_qrcode(filename):
+    return send_from_directory('static/qrcodes', filename)
 
 @app.route('/status', methods=['GET'])
 @swag_from('swagger.yml', endpoint='/status', methods=['GET'])
@@ -102,7 +179,7 @@ def send_message():
         for mensagem in mensagens:
             if isinstance(mensagem, str) and mensagem.strip():
                 bot_instance.enviar_mensagem_para_contato_aberto(mensagem)
-                time.sleep(1)  # pequena pausa entre mensagens (ajustável)
+                time.sleep(1)  
 
         historico = bot_instance.pegar_todas_mensagens()
         bot_instance.go_to_home()

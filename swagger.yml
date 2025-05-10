@@ -40,6 +40,49 @@ paths:
         400:
           description: Bot já está em execução.
 
+  /login:
+    post:
+      summary: Realiza o login do bot no WhatsApp Web
+      description: >
+        Verifica se o bot está logado no WhatsApp Web. 
+        Se não estiver, gera um QRCode e fornece a URL da imagem para escaneamento.
+        O QRCode é temporário e expira em 2 minutos.
+      responses:
+        200:
+          description: Status do login retornado com sucesso.
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: "aguardando_login"
+              mensagem:
+                type: string
+                example: "Bot em execução aguardando leitura do QRCode."
+              qrCodeUrl:
+                type: string
+                example: "http://localhost:3000/qrcode/abc123def456.png"
+        400:
+          description: Bot ainda não foi iniciado.
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              mensagem:
+                type: string
+        500:
+          description: Erro interno ao verificar ou gerar o QRCode.
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              mensagem:
+                type: string
+              erro:
+                type: string
+
   /status:
     get:
       summary: Verifica o status do bot
