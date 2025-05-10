@@ -2,8 +2,12 @@ from flask import Flask, request, jsonify
 from threading import Thread
 from services.bot.bot import automation
 import time
+from flasgger import Swagger
+from flasgger.utils import swag_from
 
 app = Flask(__name__)
+swagger = Swagger(app, template_file='swagger.yml')
+
 
 bot_thread = None
 bot_instance = None
@@ -25,6 +29,7 @@ def bot_loop():
         time.sleep(1)
 
 @app.route('/start', methods=['POST'])
+@swag_from('swagger.yml', endpoint='/start', methods=['POST'])
 def start_bot():
     global bot_thread, running
 
@@ -42,6 +47,7 @@ def start_bot():
     }), 200
 
 @app.route('/status', methods=['GET'])
+@swag_from('swagger.yml', endpoint='/status', methods=['GET'])
 def bot_status():
     if bot_instance is None:
         return jsonify({
@@ -66,6 +72,7 @@ def bot_status():
         }), 500
 
 @app.route('/send', methods=['POST'])
+@swag_from('swagger.yml', endpoint='/send', methods=['POST'])
 def send_message():
     if bot_instance is None:
         return jsonify({
@@ -104,6 +111,7 @@ def send_message():
         }), 500
 
 @app.route('/history/<contato>', methods=['GET'])
+@swag_from('swagger.yml', endpoint='/history/{contato}', methods=['GET'])
 def get_history(contato):
     if bot_instance is None:
         return jsonify({
@@ -130,6 +138,7 @@ def get_history(contato):
         }), 500
 
 @app.route('/stop', methods=['POST'])
+@swag_from('swagger.yml', endpoint='/stop', methods=['POST'])
 def stop_bot():
     global running, bot_instance
     running = False
@@ -143,4 +152,4 @@ def stop_bot():
     }), 200
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=False,port=3000)

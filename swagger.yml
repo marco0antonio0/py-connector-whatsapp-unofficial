@@ -1,0 +1,153 @@
+swagger: "2.0"
+info:
+  title: API Bot WhatsApp
+  description: >
+    Este projeto é um bot de automação do WhatsApp desenvolvido com Selenium WebDriver,
+    permitindo interações automáticas com o WhatsApp Web como envio de mensagens,
+    detecção de novas conversas, leitura de histórico, entre outros.
+  version: "1.0.0"
+  contact:
+    name: Marco Antonio da Silva Mesquita
+    email: exemplo@dominio.com
+    url: https://github.com/seuusuario
+
+host: localhost:3000
+basePath: /
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+  /start:
+    post:
+      summary: Inicia o bot
+      description: >
+        Inicia uma instância do bot em uma thread separada, abrindo a conexão com o WhatsApp Web.
+        Se o bot já estiver rodando, retorna um erro informando que já está em execução.
+      responses:
+        200:
+          description: Bot iniciado com sucesso.
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              mensagem:
+                type: string
+        400:
+          description: Bot já está em execução.
+
+  /status:
+    get:
+      summary: Verifica o status do bot
+      description: >
+        Retorna se o bot está rodando e se já está logado no WhatsApp Web.
+      responses:
+        200:
+          description: Status retornado com sucesso.
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              logado:
+                type: boolean
+              mensagem:
+                type: string
+        500:
+          description: Erro ao verificar status.
+
+  /send:
+    post:
+      summary: Envia mensagem para um contato
+      description: >
+        Pesquisa e abre a conversa com o contato informado, envia a mensagem e retorna o histórico após envio.
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - contato
+              - mensagem
+            properties:
+              contato:
+                type: string
+                example: "marco antonio"
+              mensagem:
+                type: string
+                example: "Olá, tudo bem?"
+      responses:
+        200:
+          description: Mensagem enviada com sucesso.
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              mensagem:
+                type: string
+              dados:
+                type: object
+                properties:
+                  historico_mensagens:
+                    type: array
+                    items:
+                      type: string
+        400:
+          description: Dados inválidos ou bot inativo.
+        500:
+          description: Erro ao enviar mensagem.
+
+  /history/{contato}:
+    get:
+      summary: Obtém histórico de mensagens com contato
+      description: >
+        Abre a conversa com o contato informado e retorna todas as mensagens disponíveis.
+      parameters:
+        - name: contato
+          in: path
+          required: true
+          type: string
+          description: Nome do contato para abrir a conversa e obter as mensagens.
+      responses:
+        200:
+          description: Histórico obtido com sucesso.
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              mensagem:
+                type: string
+              dados:
+                type: object
+                properties:
+                  mensagens:
+                    type: array
+                    items:
+                      type: string
+        400:
+          description: Bot não está ativo.
+        500:
+          description: Erro ao buscar histórico.
+
+  /stop:
+    post:
+      summary: Finaliza o bot
+      description: >
+        Encerra o navegador e finaliza a execução do bot, liberando recursos.
+      responses:
+        200:
+          description: Bot finalizado com sucesso.
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              mensagem:
+                type: string
