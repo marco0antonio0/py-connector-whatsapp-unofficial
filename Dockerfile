@@ -17,4 +17,4 @@ EXPOSE 3000
 ENV PYTHONUNBUFFERED=1
 
 # Carrega as variáveis de ambiente do .env antes de iniciar a aplicação
-CMD ["sh", "-c", "python main.py"]
+CMD ["sh", "-c", "python prod.py"]
