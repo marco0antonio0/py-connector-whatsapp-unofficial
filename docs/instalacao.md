@@ -1,6 +1,9 @@
 
 # 📦 PyConector - Instalação e Inicialização
-
+> ____
+> 🔗 **Contato profissional:** [linkedin.com/in/marco-antonio-aa3024233](https://www.linkedin.com/in/marco-antonio-aa3024233)  
+> 🔗 **Repositorio-PyConector:** [https://github.com/marco0antonio0/py-connector-whatsapp-unofficial](hhttps://github.com/marco0antonio0/py-connector-whatsapp-unofficial)  
+> ____
 1. **Clone o repositório**:
 
    ```bash
@@ -8,7 +11,7 @@
    cd py-connector-whatsapp-unofficial
    ```
 
-2. **Instale as dependências python**:
+2. **Instale as dependências Python**:
 
    ```bash
    pip install -r requirements.txt
@@ -20,48 +23,48 @@
    chmod +x install.sh
    ./install.sh
    ```
-   🔧 O que o ./install.sh faz:
 
-    Este script automatiza toda a configuração necessária para que o PyConector funcione corretamente com o Google Chrome e o ChromeDriver compatíveis.
+   🔧 O que o `./install.sh` faz:
 
-    📋 Etapas executadas:
+   Este script automatiza toda a configuração necessária para que o PyConector funcione corretamente com o Google Chrome e o ChromeDriver compatíveis.
 
-    1. Verifica se o Google Chrome está instalado:
-    - Caso não esteja, o script baixa o pacote .deb do Chrome diretamente do site oficial do Google.
-    - Em seguida, ele instala automaticamente o navegador via apt.
+   📋 **Etapas executadas**:
 
-    2. Detecta a versão instalada do Google Chrome:
-    - O script executa google-chrome --version e extrai a versão exata instalada para garantir compatibilidade com o ChromeDriver.
+   - Verifica se o Google Chrome está instalado:
+     - Caso não esteja, o script baixa o pacote `.deb` diretamente do site oficial do Google e instala com `apt`.
 
-    3. Monta a URL de download do ChromeDriver oficial:
-    - Com base na versão instalada do Chrome, é gerada uma URL personalizada de download direto do servidor do Google:
-        https://storage.googleapis.com/chrome-for-testing-public/<versão>/linux64/chromedriver-linux64.zip
+   - Detecta a versão instalada do Google Chrome:
+     - Executa `google-chrome --version` e extrai a versão exata para garantir compatibilidade.
 
-    4. Cria o diretório ./chromeDrive:
-    - Todos os arquivos extraídos do ChromeDriver serão armazenados neste diretório, usado pela automação.
+   - Monta a URL de download do ChromeDriver oficial:
+     - Exemplo de URL:  
+       `https://storage.googleapis.com/chrome-for-testing-public/<versão>/linux64/chromedriver-linux64.zip`
 
-    5. Baixa e extrai o ChromeDriver:
-    - O .zip é baixado silenciosamente.
-    - O conteúdo é extraído e movido diretamente para a pasta ./chromeDrive.
+   - Cria o diretório `./chromeDrive` e armazena os binários.
 
-    6. Remove arquivos temporários:
-    - Limpeza automática do .zip baixado e das pastas auxiliares para manter o ambiente limpo.
+   - Baixa, extrai e move o ChromeDriver para `./chromeDrive`.
 
-    ✅ Resultado:
-    Após rodar ./install.sh, seu ambiente estará preparado com:
-    - Google Chrome instalado (caso não estivesse).
-    - ChromeDriver correspondente à versão do Chrome, localizado em ./chromeDrive/.
+   - Limpa arquivos temporários (.zip, pastas auxiliares).
+
+   ✅ **Resultado**:
+   Ambiente pronto com:
+   - Google Chrome instalado (se necessário).
+   - ChromeDriver correspondente em `./chromeDrive/`.
 
 4. **Inicie o PyConector**:
-- Opções:
-    - Iniciar a PyConector Autonomo
-    - ```bash
-        python3 main.py
-    - Iniciar a PyConector API
-    - ```bash
-        python3 api.py
-5. **Acesse o swaggerDocs e veja os endpoints**:  
-    🌐 **Swagger disponível em:** [http://localhost:3000/apidocs/](http://localhost:3000/apidocs/) 
 
----
+   Opções:
 
+   - **Autônomo**:
+     ```bash
+     python3 main.py
+     ```
+
+   - **Via API**:
+     ```bash
+     python3 api.py
+     ```
+
+5. **Acesse o Swagger e veja os endpoints**:
+
+   🌐 [http://localhost:3000/apidocs/](http://localhost:3000/apidocs/)

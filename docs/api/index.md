@@ -6,6 +6,7 @@ Esta API foi desenvolvida com **Flask** e integra automação via **Selenium Web
 A arquitetura foi projetada com foco em **concorrência controlada**, utilizando `Queue` e `Thread`, garantindo que apenas uma tarefa seja executada por vez. Isso evita conflitos e garante estabilidade mesmo em operações contínuas com o navegador.
 > ____
 > 🔗 **Contato profissional:** [linkedin.com/in/marco-antonio-aa3024233](https://www.linkedin.com/in/marco-antonio-aa3024233)  
+> 🔗 **Repositorio-PyConector:** [https://github.com/marco0antonio0/py-connector-whatsapp-unofficial](hhttps://github.com/marco0antonio0/py-connector-whatsapp-unofficial)  
 > ____
 ---
 
