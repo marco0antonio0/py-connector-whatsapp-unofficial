@@ -1,0 +1,26 @@
+site_name: PyConector WhatsApp Automation
+
+nav:
+  - Início: index.md
+  - API:
+      - Visão Geral: api/index.md
+      - Endpoints: api/endpoints.md
+  - Classe Automation: codigo/automation.md
+  - Instalação: instalacao.md
+  - Estrutura do Projeto: estrutura.md
+  - Execução Autônoma:
+      - Visão Geral: execucao/index.md
+      - Fluxo Principal: execucao/main.md
+      - Resposta Fixa: execucao/example_auto.md
+      - Resposta Inteligente: execucao/example_response_last.md
+      - Enviar Imagem: execucao/example_image.md
+
+theme:
+  name: material
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - tables
+  - admonition
+  - codehilite
