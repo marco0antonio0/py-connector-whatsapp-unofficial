@@ -1,6 +1,9 @@
 
 # 🧠 Classe `automation`
-
+> ____
+> 🔗 **Contato profissional:** [linkedin.com/in/marco-antonio-aa3024233](https://www.linkedin.com/in/marco-antonio-aa3024233)  
+> 🔗 **Repositorio-PyConector:** [https://github.com/marco0antonio0/py-connector-whatsapp-unofficial](hhttps://github.com/marco0antonio0/py-connector-whatsapp-unofficial)  
+> ____
 Classe principal responsável por gerenciar a automação do WhatsApp Web via Selenium WebDriver. Essa classe encapsula todos os métodos necessários para inicializar o navegador, autenticar com QR Code, enviar mensagens, verificar status e interagir com contatos.
 
 ```python

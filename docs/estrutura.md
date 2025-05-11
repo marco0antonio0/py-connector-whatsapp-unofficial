@@ -5,6 +5,7 @@ Abaixo está a estrutura principal do repositório `py-connector-whatsapp-unoffi
 
 > ____
 > 🔗 **Contato profissional:** [linkedin.com/in/marco-antonio-aa3024233](https://www.linkedin.com/in/marco-antonio-aa3024233)  
+> 🔗 **Repositorio-PyConector:** [https://github.com/marco0antonio0/py-connector-whatsapp-unofficial](hhttps://github.com/marco0antonio0/py-connector-whatsapp-unofficial)  
 > ____
 
 ```

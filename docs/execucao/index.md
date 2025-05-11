@@ -6,6 +6,10 @@ Essa abordagem é ideal para testes locais, automações simples ou comportament
 
 A classe `automation`, responsável por controlar o WhatsApp Web via Selenium, é a mesma utilizada na versão com API. No entanto, aqui o fluxo de controle e lógica estão contidos diretamente nos scripts Python.
 
+> ____
+> 🔗 **Contato profissional:** [linkedin.com/in/marco-antonio-aa3024233](https://www.linkedin.com/in/marco-antonio-aa3024233)  
+> 🔗 **Repositorio-PyConector:** [https://github.com/marco0antonio0/py-connector-whatsapp-unofficial](hhttps://github.com/marco0antonio0/py-connector-whatsapp-unofficial)  
+> ____
 ---
 
 ## 📂 Exemplos incluídos
