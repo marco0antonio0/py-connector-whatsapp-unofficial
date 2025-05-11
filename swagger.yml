@@ -5,11 +5,11 @@ info:
     Este projeto é um bot de automação do WhatsApp desenvolvido com Selenium WebDriver,
     permitindo interações automáticas com o WhatsApp Web como envio de mensagens,
     detecção de novas conversas, leitura de histórico, entre outros.
+    Para contato profissional, acesse: https://www.linkedin.com/in/marco-antonio-aa3024233
   version: "1.0.0"
   contact:
     name: Marco Antonio da Silva Mesquita
-    email: exemplo@dominio.com
-    url: https://github.com/seuusuario
+    email: marcomesquitajr@hotmail.com
 
 host: localhost:3000
 basePath: /

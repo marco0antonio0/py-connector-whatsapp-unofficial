@@ -28,10 +28,10 @@ This project is a WhatsApp automation bot developed using **Selenium WebDriver**
    cd py-connector-whatsapp-unofficial
    ```
 
-2. **Install Python Dependencies and Google Chrome**:
+2. **Install Python Dependencies**:
 
    ```bash
-   pip install selenium webdriver-manager pillow
+   pip install -r requirements.txt
    ```
 
 3. **Run Installation Script**:
@@ -161,10 +161,10 @@ Este projeto é um bot de automação do WhatsApp desenvolvido com **Selenium We
    cd py-connector-whatsapp-unofficial
    ```
 
-2. **Instale as dependências e o Chrome**:
+2. **Instale as dependências python**:
 
    ```bash
-   pip install selenium webdriver-manager pillow
+   pip install -r requirements.txt
    ```
 
 3. **Execute o script de instalação**:
