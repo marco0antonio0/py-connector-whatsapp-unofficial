@@ -2,7 +2,10 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
 import os
+import psutil
+import subprocess
 
+# Importações dos serviços
 from .services.getDataRef import getDataRef
 from .services.login import login
 from .services.checkIsLogin import checkIsLogin
@@ -22,15 +25,42 @@ class automation:
     """Classe principal de automação para WhatsApp Web."""
 
     def __init__(self, gui=False):
-        """
-        Inicializa o navegador com as opções definidas.
-
-        Args:
-            gui (bool): Se True, abre com interface gráfica. Caso contrário, headless.
-        """
         self.loginStatus = False
         self.site = "https://web.whatsapp.com/"
+        self.user_data_dir = os.path.abspath("dados")
+        devtools_path = os.path.join(self.user_data_dir, "DevToolsActivePort")
 
+        # Verifica se o Chrome está usando a pasta "dados"
+        chrome_running = False
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if proc.info['name'] and 'chrome' in proc.info['name'].lower():
+                    if proc.info['cmdline'] and any(self.user_data_dir in str(arg) for arg in proc.info['cmdline']):
+                        chrome_running = True
+                        break
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+
+        # Se não estiver rodando, limpa o DevToolsActivePort
+        if not chrome_running:
+            if os.path.exists(devtools_path):
+                try:
+                    os.remove(devtools_path)
+                    print("🧹 DevToolsActivePort removido com sucesso.")
+                except Exception as e:
+                    print(f"⚠️ Erro ao remover DevToolsActivePort: {e}")
+        else:
+            # Se estiver travado, tenta matar processos e limpar tudo
+            print("⚠️ Chrome pode estar travado. Tentando limpar...")
+            subprocess.run(["pkill", "-f", "chrome"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if os.path.exists(devtools_path):
+                try:
+                    os.remove(devtools_path)
+                    print("🧹 DevToolsActivePort forçado após pkill.")
+                except Exception as e:
+                    print(f"❌ Falha ao limpar DevToolsActivePort após pkill: {e}")
+
+        # Opções do Chrome
         opt = Options()
         if not gui:
             opt.add_argument("--headless=new")
@@ -38,13 +68,14 @@ class automation:
             opt.add_argument("--no-sandbox")
             opt.add_argument("--disable-dev-shm-usage")
         opt.add_argument("lang=pt-br")
-        opt.add_argument("user-data-dir=dados")
         opt.add_argument("start-maximized")
+        opt.add_argument(f"user-data-dir={self.user_data_dir}")
 
+        # Inicializa ChromeDriver
         driver_path = os.path.join(os.getcwd(), "chromeDrive/chromedriver")
         chrome_service = ChromeService(executable_path=driver_path)
-
         self.driver = webdriver.Chrome(service=chrome_service, options=opt)
+
 
     def getDataRef(self):
         """Obtém os dados de referência do QRCode de login."""
