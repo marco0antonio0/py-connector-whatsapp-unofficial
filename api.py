@@ -9,8 +9,10 @@ import os
 from flasgger import Swagger
 from flasgger.utils import swag_from
 from services.bot.bot import automation
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 swagger = Swagger(app, template_file='swagger.yml')
 
 # Estados globais
