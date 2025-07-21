@@ -1,50 +1,35 @@
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.by import By
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..bot import automation
 
 
-def pegar_ultima_mensagem(self:"automation"):
+def pegar_ultima_mensagem(self: "automation") -> str:
     try:
-        # print("🔍 Buscando o elemento da lista de mensagens...")
-        lista_mensagens_element = self.driver.find_element(
+        # Tenta encontrar todas as mensagens recebidas (message-in)
+        mensagens = self.driver.find_elements(
             By.XPATH,
-            '//*[@id="main"]/div[3]/div/div[2]/div[3]',
+            "//div[contains(@class, 'message-in')]"
         )
-        # print("✅ Elemento da lista de mensagens encontrado.")
 
-        # print("🔍 Buscando todas as mensagens recebidas (message-in)...")
-        mensagens = lista_mensagens_element.find_elements(
-            By.XPATH, ".//div[contains(@class, 'message-in')]"
+        if not mensagens:
+            return "Nenhuma mensagem encontrada"
+
+        ultima = mensagens[-1]
+
+        # Busca o texto da última mensagem
+        texto_elemento = ultima.find_element(
+            By.XPATH,
+            ".//div[contains(@class, 'copyable-text')]"
         )
-        # print(f"📨 Total de mensagens encontradas: {len(mensagens)}")
+        texto = texto_elemento.text.strip()
 
-        if mensagens:
-            # print("📥 Pegando a última mensagem da lista...")
-            ultima_mensagem = mensagens[-1]
+        # Remove horário se houver
+        partes = texto.split("\n")
+        mensagem_final = " ".join(partes[:-1]) if len(partes) > 1 else texto
 
-            # print("🔍 Buscando o texto da última mensagem...")
-            texto_da_mensagem = ultima_mensagem.find_element(
-                By.XPATH, ".//div[contains(@class, 'copyable-text')]"
-            ).text
-            # print(f"📝 Texto bruto da mensagem: {texto_da_mensagem}")
-
-            partes_do_texto = texto_da_mensagem.split("\n")
-            # print(f"🔎 Partes do texto separadas: {partes_do_texto}")
-
-            if len(partes_do_texto) > 1:
-                mensagem_final = " ".join(partes_do_texto[:-1])
-                # print(f"✅ Mensagem final sem horário: {mensagem_final}")
-                return mensagem_final
-            else:
-                # print(f"✅ Mensagem final (sem separação detectada): {texto_da_mensagem}")
-                return texto_da_mensagem
+        return mensagem_final
 
     except Exception as e:
-        # print(f"❌ Erro ao pegar a última mensagem: {e}")
-        return "Erro ao encontrar a mensagem"
-
-    # print("⚠️ Nenhuma mensagem encontrada.")
-    return "Nenhuma mensagem encontrada"
+        return f"Erro ao encontrar a mensagem: {str(e)}"
