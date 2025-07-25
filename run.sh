@@ -145,3 +145,4 @@ else
   echo "🚀 Executando main.py..."
   python3 main.py
 fi
+
