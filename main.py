@@ -1,53 +1,10 @@
-import os
-import json
 import time
 import traceback
 
-CONFIG_FILE = "config.json"
-
-
-def load_config() -> dict:
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-
-def save_config(config: dict):
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(config, f, indent=2)
-
-
-config = load_config()
-
-# ==============================
-#   TERMOS DE USO
-#   sempre verificado, pulado se
-#   já aceito anteriormente
-# ==============================
-from cli import etapa_termos
-if not etapa_termos():
-    exit(0)
-
-# ==============================
-#   VERIFICAÇÃO DE CONEXÃO
-#   abre o Chrome uma vez,
-#   checa sessão e se expirou
-#   roda etapa 1 + 2 antes de
-#   iniciar o bot
-# ==============================
-from cli import _detectar_estado, etapa_browser, etapa_whatsapp
 from services.bot.bot import automation
+from utils.bootstrap import bootstrap_main_config
 
-_check = automation(gui=config.get("gui", False))
-_check.driver.get(_check.site)
-_estado = _detectar_estado(_check, timeout=20)
-_check.exit()
-
-if _estado != "logado":
-    config = etapa_browser(config)
-    etapa_whatsapp(config)
-    config = load_config()
+config = bootstrap_main_config()
 
 # ==============================
 #   INICIALIZAÇÃO DO BOT
