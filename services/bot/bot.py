@@ -4,7 +4,9 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 import os
 import psutil
 import subprocess
-from typing import Callable, Dict, List
+import threading
+import time
+from typing import Callable, Dict, List, Optional, Set
 
 from .services.getDataRef import getDataRef
 from .services.login import login
@@ -22,6 +24,27 @@ from .services.sendFigure import sendFigure
 from .services.abrir_conversa_por_nome import abrir_conversa_por_nome
 
 
+class _NewMessageHook:
+    """
+    Hook de nova mensagem no estilo decorator.
+    Uso:
+        @instance.hook_new_message()
+        def callback(payload):
+            contato = instance.hook_new_message.contato
+            ...
+    """
+
+    def __init__(self, owner: "automation"):
+        self._owner = owner
+        self.contato: str = ""
+
+    def __call__(self):
+        def decorator(func: Callable):
+            self._owner._hook_new_message_handler = func
+            return func
+        return decorator
+
+
 class automation:
     """Automação do WhatsApp Web via Selenium."""
 
@@ -30,6 +53,11 @@ class automation:
         self._ready_emitted = False
         self._bridge_installed = False
         self._events: Dict[str, List[Callable[[dict], None]]] = {}
+        self._hook_new_message_handler: Optional[Callable] = None
+        self.hook_new_message = _NewMessageHook(self)
+        self._background_running = False
+        self._background_thread: Optional[threading.Thread] = None
+        self._known_unread: Set[str] = set()
         self.site = "https://web.whatsapp.com/"
         self.user_data_dir = os.path.abspath("dados")
         devtools_path = os.path.join(self.user_data_dir, "DevToolsActivePort")
@@ -61,6 +89,8 @@ class automation:
 
         driver_path = os.path.abspath("chromeDrive/chromedriver")
         self.driver = webdriver.Chrome(service=ChromeService(executable_path=driver_path), options=opt)
+        self.on("message", self._handle_message_hook)
+        self.on("unread_snapshot", self._handle_unread_snapshot)
 
     def on(self, event_name: str, callback: Callable[[dict], None]):
         if event_name not in self._events:
@@ -169,6 +199,92 @@ class automation:
 
         return len(raw_events)
 
+    def _handle_unread_snapshot(self, payload: dict):
+        contatos = payload.get("contacts", [])
+        if not isinstance(contatos, list):
+            return
+        self._known_unread = {c.strip() for c in contatos if isinstance(c, str) and c.strip()}
+
+    def _handle_message_hook(self, payload: dict):
+        contato = (payload.get("contact") or "").strip()
+        if not contato:
+            return
+        self.hook_new_message.contato = contato
+
+        if self._hook_new_message_handler is None:
+            return
+
+        try:
+            # Prioriza assinatura callback(payload)
+            self._hook_new_message_handler(payload)
+        except TypeError:
+            # Compatibilidade: callback() sem argumentos
+            self._hook_new_message_handler()
+        except Exception as e:
+            print(f"[hook_new_message] erro no callback: {e}")
+
+    def _background_loop(self, poll_interval: float, fallback_interval: float):
+        last_fallback = 0.0
+        while self._background_running:
+            try:
+                self.pump_events()
+            except Exception as e:
+                print(f"[background] erro no pump_events: {e}")
+
+            now = time.time()
+            if now - last_fallback >= fallback_interval:
+                last_fallback = now
+                try:
+                    unread_now = {c for c in self.VerificarNovaMensagem() if isinstance(c, str) and c.strip()}
+                    novos = unread_now - self._known_unread
+                    for contato in sorted(novos):
+                        self.emit("message", {"contact": contato, "source": "fallback"})
+                    self._known_unread = unread_now
+                except Exception as e:
+                    print(f"[background] erro no fallback unread: {e}")
+
+            time.sleep(max(0.2, poll_interval))
+
+    def start_background(self, poll_interval: float = 1.0, fallback_interval: float = 3.0):
+        if self._background_running:
+            return
+        self._background_running = True
+        self._background_thread = threading.Thread(
+            target=self._background_loop,
+            args=(poll_interval, fallback_interval),
+            daemon=True,
+            name="pywa-event-loop",
+        )
+        self._background_thread.start()
+
+    def stop_background(self):
+        self._background_running = False
+        if self._background_thread and self._background_thread.is_alive():
+            self._background_thread.join(timeout=2.0)
+
+    def run(self, poll_interval: float = 1.0, fallback_interval: float = 3.0, block: bool = True):
+        """
+        Decorator para iniciar o loop em background.
+        Uso:
+            @instance.run()
+            @instance.hook_new_message()
+            def callback(payload):
+                ...
+        """
+
+        def decorator(func: Callable):
+            self.start_background(poll_interval=poll_interval, fallback_interval=fallback_interval)
+
+            if block:
+                try:
+                    while self._background_running:
+                        time.sleep(0.5)
+                except KeyboardInterrupt:
+                    self.stop_background()
+            return func
+
+        return decorator
+
     def getDataRef(self):
         return getDataRef(self)
 
@@ -204,6 +320,7 @@ class automation:
         return enviar_mensagem_para_contato_aberto(self, texto)
 
     def exit(self):
+        self.stop_background()
         self.driver.quit()
 
     def VerificarNovaMensagem(self) -> list:
