@@ -11,7 +11,7 @@ from utils.cli import (
 from services.bot.bot import automation
 
 
-def bootstrap_main_config() -> dict:
+def bootstrap_main_config(force_reconfigure: bool = False) -> dict:
     """
     Fluxo de bootstrap da execução principal:
     - carrega config
@@ -23,6 +23,8 @@ def bootstrap_main_config() -> dict:
     non_interactive = os.getenv("NON_INTERACTIVE", "").strip() in {"1", "true", "TRUE", "yes", "YES"}
 
     if non_interactive:
+        if force_reconfigure:
+            print("⚠️ NON_INTERACTIVE=1 ativo; ignorando -r/--reconfigure.")
         return config
 
     if not etapa_termos():
@@ -30,7 +32,9 @@ def bootstrap_main_config() -> dict:
 
     # Permite configurar API key/webhook via CLI no primeiro bootstrap,
     # mesmo quando a sessão do WhatsApp já está logada.
-    if not (config.get("api_key") or "").strip() and not (config.get("webhook_url") or "").strip():
+    if force_reconfigure:
+        config = etapa_api_preferencias(config)
+    elif not (config.get("api_key") or "").strip() and not (config.get("webhook_url") or "").strip():
         config = etapa_api_preferencias(config)
 
     checker = automation(gui=config.get("gui", False))

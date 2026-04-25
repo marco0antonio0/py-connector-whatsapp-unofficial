@@ -3,6 +3,7 @@ import time
 import traceback
 import threading
 import secrets
+import argparse
 from functools import wraps
 
 import requests
@@ -15,6 +16,22 @@ from services.bot.bot import automation
 from utils.bootstrap import bootstrap_main_config
 from utils.cli import save_config
 from utils.runtime_messages import print_system_started
+
+
+def _parse_args():
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument(
+        "-r",
+        "--reconfigure",
+        action="store_true",
+        help="Reabre o CLI para reconfigurar API key e webhook URL.",
+    )
+    args, _ = parser.parse_known_args()
+    return args
+
+
+ARGS = _parse_args()
+
 
 def require_api_key(func):
     @wraps(func)
@@ -36,7 +53,7 @@ def require_api_key(func):
     return wrapper
 
 
-config = bootstrap_main_config()
+config = bootstrap_main_config(force_reconfigure=ARGS.reconfigure)
 instance = automation(gui=config.get("gui", False))
 instance.start()
 print_system_started()
