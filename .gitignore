@@ -9,3 +9,5 @@
 /__pycache__
 /chromeDrive
 /static
+config.json
+eula.txt

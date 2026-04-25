@@ -1,11 +1,11 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_file
 from threading import Thread, Event
 from queue import Queue
 import threading
 import time
 import uuid
 import qrcode
-import os
+import io
 from flasgger import Swagger
 from flasgger.utils import swag_from
 from services.bot.bot import automation
@@ -18,6 +18,9 @@ swagger = Swagger(app, template_file='swagger.yml')
 # Estados globais
 bot_instance = None
 running = False
+
+# QR codes em memória: {token: bytes}  — expiram após 120s
+_qr_store: dict[str, bytes] = {}
 
 # Fila de tarefas
 task_queue = Queue()
@@ -90,13 +93,14 @@ def login_bot():
                     return jsonify({"status": "logado", "mensagem": "Bot já está logado no WhatsApp Web."}), 200
 
                 qr_data = bot_instance.getDataRef()
-                img_name = f"{uuid.uuid4().hex}.png"
-                img_path = os.path.join("static", "qrcodes", img_name)
+                token = uuid.uuid4().hex
 
-                qrcode.make(qr_data).save(img_path)
+                buf = io.BytesIO()
+                qrcode.make(qr_data).save(buf, format="PNG")
+                _qr_store[token] = buf.getvalue()
 
-                threading.Timer(120, lambda: os.remove(img_path) if os.path.exists(img_path) else None).start()
-                full_url = f"{host_url}/qrcode/{img_name}"
+                threading.Timer(120, lambda t=token: _qr_store.pop(t, None)).start()
+                full_url = f"{host_url}/qrcode/{token}"
 
                 return jsonify({
                     "status": "aguardando_login",
@@ -121,12 +125,15 @@ def login_bot():
     event.wait()
     return result['response']
 
-@app.route('/qrcode/<filename>')
-def serve_qrcode(filename):
+@app.route('/qrcode/<token>')
+def serve_qrcode(token):
     """
-    Serve arquivos de imagem QRCode gerados no login.
+    Serve QRCode temporário gerado no login (expira em 120s, não é salvo em disco).
     """
-    return send_from_directory('static/qrcodes', filename)
+    data = _qr_store.get(token)
+    if not data:
+        return jsonify({"status": "erro", "mensagem": "QR Code não encontrado ou expirado."}), 404
+    return send_file(io.BytesIO(data), mimetype="image/png")
 
 @app.route('/status', methods=['GET'])
 @swag_from('swagger.yml', endpoint='/status', methods=['GET'])
