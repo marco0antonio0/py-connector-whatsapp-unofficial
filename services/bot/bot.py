@@ -98,7 +98,7 @@ class automation:
         return pegar_todas_mensagens(self)
 
     def searchExistsContactAndOpen(self, contato: str):
-        searchExistsContactAndOpen(self, contato)
+        return searchExistsContactAndOpen(self, contato)
 
     def abrir_conversa_por_nome(self, contato: str):
         abrir_conversa_por_nome(self, contato)

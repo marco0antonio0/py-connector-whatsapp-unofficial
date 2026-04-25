@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import traceback
 
 CONFIG_FILE = "config.json"
 
@@ -75,12 +76,18 @@ while True:
             contatosEncontrados.add(contato)
 
     if novos_contatos and (not listaPermitidos or any(c in novos_contatos for c in listaPermitidos)):
-        for contato in list(contatosEncontrados):
+        # Processa só quem está com não lidas neste ciclo.
+        # Isso evita tentar contatos antigos presos em contatosEncontrados.
+        for contato in novos_contatos:
             if contato == "Marco Antonio":
                 print("📨 Marco mandou mensagem")
 
                 try:
-                    instance.searchExistsContactAndOpen(contato)
+                    encontrou = instance.searchExistsContactAndOpen(contato)
+                    if not encontrou:
+                        print(f"⚠️ Não foi possível abrir a conversa de '{contato}'.")
+                        continue
+
                     history = instance.pegar_todas_mensagens()
 
                     success = instance.enviar_mensagem_para_contato_aberto("ola essa e uma mensagem de teste")
@@ -91,6 +98,7 @@ while True:
 
                 except Exception as e:
                     print(f"❌ Erro: {e}")
+                    traceback.print_exc()
 
                 finally:
                     instance.go_to_home()
