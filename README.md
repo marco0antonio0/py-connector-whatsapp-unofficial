@@ -19,6 +19,59 @@ This project is a WhatsApp automation bot developed using **Selenium WebDriver**
 - **Get Last Message**: Retrieves the latest message from a chat.
 - **New Message Detection**: Checks for new messages and prints notifications.
 
+### ▶️ How To Run (Local + Docker)
+
+#### Local (recommended for first setup)
+
+```bash
+chmod +x ./run.sh
+./run.sh
+```
+
+`run.sh` will:
+- validate EULA/termos,
+- prepare dependencies/environment,
+- start `main.py`.
+
+#### Docker (interactive setup/QR via terminal)
+
+```bash
+docker compose run --rm -it -e NON_INTERACTIVE=0 whatsapp-bot python3 main.py
+```
+
+Use this mode to run CLI setup (API key/webhook) and pair WhatsApp by QR.
+
+#### Docker (service in background)
+
+```bash
+docker compose up -d
+```
+
+Starts the app in detached mode.
+To check logs:
+
+```bash
+docker compose logs -f whatsapp-bot
+```
+
+#### Swagger / API Docs
+
+After the app is running, open:
+
+```text
+http://localhost:3000/apidocs/
+```
+
+Authentication:
+- protected routes require API key;
+- send header `X-API-Key: <sua-chave>`;
+- or `Authorization: Bearer <sua-chave>`.
+
+Where to get API key:
+- first run can generate and persist it in `config.json`;
+- local: `./config.json`;
+- docker: `./state/config.json`.
+
 ### 📦 Installation
 
 1. **Clone the Repository**:
@@ -151,6 +204,59 @@ Este projeto é um bot de automação do WhatsApp desenvolvido com **Selenium We
 - **Geração de QR Code**: Gera o QR para login.
 - **Recuperar última mensagem**: Lê a última mensagem do chat.
 - **Detecção de mensagens novas**: Verifica novas mensagens.
+
+### ▶️ Como Rodar (Local + Docker)
+
+#### Local (recomendado no primeiro uso)
+
+```bash
+chmod +x ./run.sh
+./run.sh
+```
+
+O `run.sh`:
+- valida termos de uso,
+- prepara dependências/ambiente,
+- inicia o `main.py`.
+
+#### Docker (setup interativo/QR no terminal)
+
+```bash
+docker compose run --rm -it -e NON_INTERACTIVE=0 whatsapp-bot python3 main.py
+```
+
+Use este modo para rodar o CLI (API key/webhook) e parear o WhatsApp com QR.
+
+#### Docker (serviço em background)
+
+```bash
+docker compose up -d
+```
+
+Inicia em modo desacoplado.
+Para ver logs:
+
+```bash
+docker compose logs -f whatsapp-bot
+```
+
+#### Swagger / Documentação da API
+
+Com a aplicação em execução, acesse:
+
+```text
+http://localhost:3000/apidocs/
+```
+
+Autenticação:
+- rotas protegidas exigem API key;
+- envie o header `X-API-Key: <sua-chave>`;
+- ou `Authorization: Bearer <sua-chave>`.
+
+Onde encontrar a API key:
+- na primeira execução ela pode ser gerada e persistida no `config.json`;
+- local: `./config.json`;
+- docker: `./state/config.json`.
 
 ### 📦 Instalação
 
