@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 import os
 import psutil
 import subprocess
+from typing import Callable, Dict, List
 
 from .services.getDataRef import getDataRef
 from .services.login import login
@@ -26,6 +27,9 @@ class automation:
 
     def __init__(self, gui: bool = False):
         self.loginStatus = False
+        self._ready_emitted = False
+        self._bridge_installed = False
+        self._events: Dict[str, List[Callable[[dict], None]]] = {}
         self.site = "https://web.whatsapp.com/"
         self.user_data_dir = os.path.abspath("dados")
         devtools_path = os.path.join(self.user_data_dir, "DevToolsActivePort")
@@ -58,29 +62,143 @@ class automation:
         driver_path = os.path.abspath("chromeDrive/chromedriver")
         self.driver = webdriver.Chrome(service=ChromeService(executable_path=driver_path), options=opt)
 
+    def on(self, event_name: str, callback: Callable[[dict], None]):
+        if event_name not in self._events:
+            self._events[event_name] = []
+        self._events[event_name].append(callback)
+
+    def emit(self, event_name: str, payload: dict | None = None):
+        payload = payload or {}
+        for callback in self._events.get(event_name, []):
+            try:
+                callback(payload)
+            except Exception as e:
+                print(f"[event:{event_name}] erro no callback: {e}")
+
+    def _install_dom_event_bridge(self):
+        script = r"""
+            if (!window.__pywaEvents) window.__pywaEvents = [];
+            if (window.__pywaBridgeInstalled) return true;
+
+            const pushEvent = (type, payload) => {
+                window.__pywaEvents.push({ type, payload, ts: Date.now() });
+            };
+
+            const getUnreadContacts = () => {
+                const grid = document.querySelector('div[role="grid"][aria-label*="Lista de conversas"]');
+                if (!grid) return [];
+
+                const rows = grid.querySelectorAll('div[role="row"]');
+                const names = [];
+                rows.forEach((row) => {
+                    const hasUnread = !!row.querySelector('span[data-testid="icon-unread-count"]');
+                    if (!hasUnread) return;
+
+                    const nameEl = row.querySelector(
+                        'div[role="gridcell"][aria-colindex="2"] span[dir="auto"][title]'
+                    );
+                    const name = nameEl && nameEl.getAttribute('title')
+                        ? nameEl.getAttribute('title').trim()
+                        : '';
+                    if (name) names.push(name);
+                });
+                names.sort();
+                return names;
+            };
+
+            const emitUnreadDiff = () => {
+                const current = getUnreadContacts();
+                const prev = window.__pywaLastUnread || [];
+
+                const prevSet = new Set(prev);
+                current.forEach((contact) => {
+                    if (!prevSet.has(contact)) {
+                        pushEvent('unread_added', { contact });
+                    }
+                });
+
+                if (JSON.stringify(prev) !== JSON.stringify(current)) {
+                    pushEvent('unread_snapshot', { contacts: current });
+                }
+
+                window.__pywaLastUnread = current;
+            };
+
+            const paneSide = document.querySelector('#pane-side');
+            if (paneSide) {
+                const observer = new MutationObserver(() => emitUnreadDiff());
+                observer.observe(paneSide, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    characterData: true
+                });
+                window.__pywaObserver = observer;
+            }
+
+            emitUnreadDiff();
+            pushEvent('bridge_ready', {});
+            window.__pywaBridgeInstalled = true;
+            return true;
+        """
+        self.driver.execute_script(script)
+        self._bridge_installed = True
+
+    def pump_events(self) -> int:
+        if not self._bridge_installed:
+            try:
+                self._install_dom_event_bridge()
+            except Exception:
+                return 0
+
+        raw_events: List[dict] = self.driver.execute_script(
+            "const ev = window.__pywaEvents || []; window.__pywaEvents = []; return ev;"
+        )
+        if not raw_events:
+            return 0
+
+        for event in raw_events:
+            event_type = event.get("type", "")
+            payload = event.get("payload", {}) or {}
+
+            # Compatibilidade com nomenclatura de evento comum do wwebjs
+            if event_type == "unread_added":
+                self.emit("message", payload)
+
+            self.emit(event_type, payload)
+
+        return len(raw_events)
+
     def getDataRef(self):
         return getDataRef(self)
 
-    def login(self):
-        return login(self)
+    def login(self, timeout_seconds: int = 180):
+        return login(self, timeout_seconds=timeout_seconds)
 
     def checkIsLogin(self):
         return checkIsLogin(self)
 
     def start(self):
         start(self)
+        if self.loginStatus and not self._ready_emitted:
+            try:
+                self._install_dom_event_bridge()
+            except Exception as e:
+                print(f"[evento] ponte DOM não instalada: {e}")
+            self.emit("ready", {"status": "ready"})
+            self._ready_emitted = True
 
     def start_api(self):
         start_api(self)
 
     def go_to_home(self):
-        go_to_home(self)
+        return go_to_home(self)
 
     def openImage(self, image_path: str):
         return openImage(self, image_path)
 
     def sendFigure(self, midia):
-        sendFigure(self, midia)
+        return sendFigure(self, midia)
 
     def enviar_mensagem_para_contato_aberto(self, texto: str) -> bool:
         return enviar_mensagem_para_contato_aberto(self, texto)
@@ -101,4 +219,4 @@ class automation:
         return searchExistsContactAndOpen(self, contato)
 
     def abrir_conversa_por_nome(self, contato: str):
-        abrir_conversa_por_nome(self, contato)
+        return abrir_conversa_por_nome(self, contato)

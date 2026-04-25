@@ -16,7 +16,10 @@ def VerificarNovaMensagem(self: "automation") -> List[str]:
 
     try:
         lista_xpath = (
-            '//div[@role="grid" and @aria-label="Lista de conversas"]'
+            '//*[@id="pane-side"]//div[@role="grid" and ('
+            'contains(@aria-label, "Lista de conversas") or '
+            'contains(@aria-label, "Resultados da pesquisa")'
+            ')]'
         )
 
         # Aguarda a lista de conversas ficar disponível antes de varrer as linhas
@@ -30,6 +33,10 @@ def VerificarNovaMensagem(self: "automation") -> List[str]:
 
         for row in rows:
             try:
+                # Ignora cabeçalhos da busca (Conversas/Mensagens)
+                if row.find_elements(By.XPATH, ".//*[@data-testid='section-header']"):
+                    continue
+
                 # Só considera a conversa se houver indicador de mensagens não lidas
                 unread = row.find_elements(
                     By.XPATH,

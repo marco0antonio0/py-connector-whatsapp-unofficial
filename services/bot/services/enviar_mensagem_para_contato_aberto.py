@@ -1,5 +1,5 @@
-from selenium.webdriver.common.by import By
 import time
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
@@ -48,7 +48,7 @@ def enviar_mensagem_para_contato_aberto(self: "automation", texto: str):
             ),
             (
                 By.XPATH,
-                '//*[@id="main"]//footer//p',
+                '//*[@id="main"]//footer//p|//*[@id="main"]//div[@contenteditable="true"]//p',
             ),
         ]
 
@@ -66,15 +66,30 @@ def enviar_mensagem_para_contato_aberto(self: "automation", texto: str):
         if not campo_mensagem:
             raise TimeoutException("Campo de mensagem não encontrado no rodapé da conversa.")
 
-        actions = ActionChains(self.driver)
-        actions.move_to_element(campo_mensagem)
-        actions.click()
-        actions.send_keys(texto)
-        actions.send_keys(Keys.ENTER)
-        actions.perform()
+        try:
+            campo_mensagem.click()
+            campo_mensagem.send_keys(texto)
+            campo_mensagem.send_keys(Keys.ENTER)
+        except Exception:
+            # Fallback para composer contenteditable quando send_keys falha em <p>
+            self.driver.execute_script(
+                """
+                const el = arguments[0];
+                const text = arguments[1];
+                el.focus();
+                if (el.isContentEditable) {
+                  document.execCommand('insertText', false, text);
+                } else {
+                  el.innerText = text;
+                }
+                """,
+                campo_mensagem,
+                texto,
+            )
+            ActionChains(self.driver).send_keys(Keys.ENTER).perform()
 
         print("✅ Mensagem enviada com sucesso!")
-        time.sleep(2)
+        time.sleep(1)
         return True
 
     except Exception as e:

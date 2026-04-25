@@ -1,6 +1,4 @@
 from selenium.webdriver.common.by import By
-import time
-from selenium.webdriver.common.by import By
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -9,11 +7,11 @@ if TYPE_CHECKING:
 
 def checkIsLogin(self:"automation"):
     try:
-        # print("[DEBUG] Verificando se o login foi realizado...")
-
-        self.driver.find_element(By.XPATH, '//*[@id="pane-side"]/div')
+        self.driver.find_element(
+            By.XPATH,
+            '//*[@id="pane-side"]//div[@role="grid" and contains(@aria-label,"Lista de conversas")]',
+        )
         return True
 
-    except Exception as e:
-        # print(f"[DEBUG] Exceção ao verificar login: {e}")
+    except Exception:
         return False

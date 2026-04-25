@@ -19,11 +19,20 @@ def pegar_ultima_mensagem(self: "automation") -> str:
         ultima = mensagens[-1]
 
         # Busca o texto da última mensagem
-        texto_elemento = ultima.find_element(
+        candidatos = ultima.find_elements(
             By.XPATH,
-            ".//div[contains(@class, 'copyable-text')]"
+            ".//span[contains(@class,'selectable-text')]|"
+            ".//div[contains(@class, 'copyable-text')]",
         )
-        texto = texto_elemento.text.strip()
+        texto = ""
+        for item in candidatos:
+            t = (item.text or "").strip()
+            if t:
+                texto = t
+                break
+
+        if not texto:
+            return "Nenhuma mensagem encontrada"
 
         # Remove horário se houver
         partes = texto.split("\n")

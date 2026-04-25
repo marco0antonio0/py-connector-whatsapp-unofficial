@@ -23,10 +23,17 @@ def pegar_todas_mensagens(self: "automation") -> List[Dict[str, str]]:
                     else "desconhecido"
                 )
 
-                texto_element = mensagem.find_element(
-                    By.XPATH, ".//div[contains(@class, 'copyable-text')]"
+                texto = ""
+                candidatos = mensagem.find_elements(
+                    By.XPATH,
+                    ".//span[contains(@class,'selectable-text')]|"
+                    ".//div[contains(@class, 'copyable-text')]",
                 )
-                texto = texto_element.text.strip()
+                for item in candidatos:
+                    t = (item.text or "").strip()
+                    if t:
+                        texto = t
+                        break
 
                 # Remove o horário da última linha, se houver
                 partes = texto.split("\n")
@@ -34,7 +41,7 @@ def pegar_todas_mensagens(self: "automation") -> List[Dict[str, str]]:
 
                 mensagens_extraidas.append({
                     "autor": autor,
-                    "mensagem": texto_final
+                    "mensagem": texto_final if texto_final else "[Mensagem sem texto]"
                 })
 
             except Exception:

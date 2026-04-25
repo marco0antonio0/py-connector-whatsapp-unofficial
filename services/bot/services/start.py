@@ -11,7 +11,9 @@ def start(self: "automation"):
     self.driver.get(self.site)
     print("             Verificando crendenciais")
     print("======================================================")
-    while self.loginStatus is not True:
-        if self.checkIsLogin():
-            self.loginStatus = True
-        self.login()
+
+    if self.checkIsLogin():
+        self.loginStatus = True
+        return
+
+    self.loginStatus = bool(self.login(timeout_seconds=180))
