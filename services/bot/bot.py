@@ -22,6 +22,10 @@ from .services.VerificarNovaMensagem import VerificarNovaMensagem
 from .services.enviar_mensagem_para_contato_aberto import enviar_mensagem_para_contato_aberto
 from .services.sendFigure import sendFigure
 from .services.abrir_conversa_por_nome import abrir_conversa_por_nome
+from .services.identificar_contato import identificar_contato
+from .services.abrir_conversa_por_identificador import abrir_conversa_por_identificador
+from .services.enviar_mensagem_por_identificador import enviar_mensagem_por_identificador
+from .services.ler_conversa_por_identificador import ler_conversa_por_identificador
 
 
 class _NewMessageHook:
@@ -59,14 +63,23 @@ class automation:
         self._background_thread: Optional[threading.Thread] = None
         self._known_unread: Set[str] = set()
         self.site = "https://web.whatsapp.com/"
-        self.user_data_dir = os.path.abspath("dados")
+        self.user_data_dir = os.path.abspath(os.getenv("WA_USER_DATA_DIR", "dados"))
+        os.makedirs(self.user_data_dir, exist_ok=True)
         devtools_path = os.path.join(self.user_data_dir, "DevToolsActivePort")
 
         for proc in psutil.process_iter(['name', 'cmdline']):
             try:
                 if proc.info['name'] and 'chrome' in proc.info['name'].lower():
                     if proc.info['cmdline'] and any(self.user_data_dir in str(arg) for arg in proc.info['cmdline']):
-                        subprocess.run(["pkill", "-f", "chrome"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        try:
+                            subprocess.run(
+                                ["pkill", "-f", "chrome"],
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
+                                check=False,
+                            )
+                        except FileNotFoundError:
+                            pass
                         break
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 continue
@@ -77,18 +90,79 @@ class automation:
             except OSError:
                 pass
 
-        opt = Options()
-        if not gui:
-            opt.add_argument("--headless=new")
-            opt.add_argument("--disable-gpu")
-            opt.add_argument("--no-sandbox")
-            opt.add_argument("--disable-dev-shm-usage")
-        opt.add_argument("lang=pt-br")
-        opt.add_argument("start-maximized")
-        opt.add_argument(f"user-data-dir={self.user_data_dir}")
+        # Em ambiente sem display (ex.: Docker/serverless), forçar headless.
+        if gui and not os.getenv("DISPLAY"):
+            print("⚠️ DISPLAY não encontrado; forçando modo headless para o Chrome.")
+            gui = False
 
-        driver_path = os.path.abspath("chromeDrive/chromedriver")
-        self.driver = webdriver.Chrome(service=ChromeService(executable_path=driver_path), options=opt)
+        chrome_bin = os.getenv("CHROME_BIN", "").strip()
+        if not chrome_bin and os.path.exists("/usr/bin/chromium"):
+            chrome_bin = "/usr/bin/chromium"
+
+        def _build_options(headless_arg: str | None):
+            opt = Options()
+            if chrome_bin:
+                opt.binary_location = chrome_bin
+            if headless_arg:
+                opt.add_argument(headless_arg)
+                opt.add_argument("--disable-gpu")
+                opt.add_argument("--no-sandbox")
+                opt.add_argument("--disable-dev-shm-usage")
+                # Em headless, alguns sites detectam "HeadlessChrome" no UA e bloqueiam fluxo.
+                # Forçamos um UA de Chrome estável.
+                default_ua = (
+                    "Mozilla/5.0 (X11; Linux x86_64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/142.0.7444.175 Safari/537.36"
+                )
+                ua = os.getenv("CHROME_USER_AGENT", default_ua).strip() or default_ua
+                opt.add_argument(f"--user-agent={ua}")
+            opt.add_argument("--window-size=1366,900")
+            opt.add_argument("--remote-debugging-port=9222")
+            opt.add_argument("--disable-blink-features=AutomationControlled")
+            opt.add_argument("--disable-infobars")
+            opt.add_argument("--disable-notifications")
+            opt.add_argument("lang=pt-br")
+            opt.add_argument("start-maximized")
+            opt.add_argument(f"user-data-dir={self.user_data_dir}")
+            opt.add_experimental_option("excludeSwitches", ["enable-automation"])
+            opt.add_experimental_option("useAutomationExtension", False)
+            return opt
+
+        driver_candidates = [
+            os.getenv("CHROMEDRIVER_PATH", "").strip(),
+            os.path.abspath("chromeDrive/chromedriver"),
+            "/usr/bin/chromedriver",
+        ]
+        driver_path = ""
+        for candidate in driver_candidates:
+            if candidate and os.path.exists(candidate):
+                driver_path = candidate
+                break
+        if not driver_path:
+            driver_path = os.path.abspath("chromeDrive/chromedriver")
+
+        startup_errors: list[str] = []
+        headless_candidates = [None] if gui else ["--headless=new", "--headless"]
+        self.driver = None
+
+        for headless_arg in headless_candidates:
+            try:
+                opt = _build_options(headless_arg)
+                self.driver = webdriver.Chrome(
+                    service=ChromeService(executable_path=driver_path),
+                    options=opt,
+                )
+                mode = "GUI" if headless_arg is None else headless_arg
+                print(f"✅ Chrome iniciado em modo: {mode}")
+                break
+            except Exception as e:
+                mode = "GUI" if headless_arg is None else headless_arg
+                startup_errors.append(f"{mode}: {e}")
+
+        if self.driver is None:
+            msg = " | ".join(startup_errors) if startup_errors else "falha desconhecida"
+            raise RuntimeError(f"Falha ao iniciar ChromeDriver. Tentativas: {msg}")
         self.on("message", self._handle_message_hook)
         self.on("unread_snapshot", self._handle_unread_snapshot)
 
@@ -274,16 +348,21 @@ class automation:
 
         def decorator(func: Callable):
             self.start_background(poll_interval=poll_interval, fallback_interval=fallback_interval)
-
-            if block:
-                try:
-                    while self._background_running:
-                        time.sleep(0.5)
-                except KeyboardInterrupt:
-                    self.stop_background()
             return func
 
         return decorator
+
+    def wait_forever(self):
+        """
+        Mantém o processo vivo até CTRL+C.
+        Útil para bloquear explicitamente no final do script,
+        sem bloquear durante a aplicação de decorators.
+        """
+        try:
+            while self._background_running:
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            self.stop_background()
 
     def getDataRef(self):
         return getDataRef(self)
@@ -337,3 +416,15 @@ class automation:
 
     def abrir_conversa_por_nome(self, contato: str):
         return abrir_conversa_por_nome(self, contato)
+
+    def identificar_contato(self, identificador: str):
+        return identificar_contato(self, identificador)
+
+    def abrir_conversa_por_identificador(self, identificador: str):
+        return abrir_conversa_por_identificador(self, identificador)
+
+    def enviar_mensagem_por_identificador(self, identificador: str, texto: str) -> bool:
+        return enviar_mensagem_por_identificador(self, identificador, texto)
+
+    def ler_conversa_por_identificador(self, identificador: str):
+        return ler_conversa_por_identificador(self, identificador)

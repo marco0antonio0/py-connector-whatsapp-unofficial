@@ -1,0 +1,160 @@
+swagger: "2.0"
+info:
+  title: WhatsApp Bot API (main.py)
+  description: API integrada ao runner principal do bot.
+  version: "1.0.0"
+basePath: /
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  ApiKeyAuth:
+    type: apiKey
+    in: header
+    name: X-API-Key
+
+paths:
+  /health:
+    get:
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - System
+      summary: Health check
+      responses:
+        200:
+          description: Serviço ativo
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: ok
+              running:
+                type: boolean
+                example: true
+
+  /api/webhook:
+    post:
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - Webhook
+      summary: Define URL do webhook para novas mensagens
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - webhook_url
+            properties:
+              webhook_url:
+                type: string
+                example: https://example.com/webhook
+      responses:
+        200:
+          description: Webhook atualizado
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: ok
+              webhook_url:
+                type: string
+
+  /api/send:
+    post:
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - Messages
+      summary: Envia mensagem(ns) para contato por identificador (nome/numero/jid/lid)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - contato
+            properties:
+              contato:
+                type: string
+                example: Marco Antonio
+              mensagem:
+                type: string
+                example: ola essa e uma mensagem de teste
+              mensagens:
+                type: array
+                items:
+                  type: string
+                example:
+                  - msg 1
+                  - msg 2
+      responses:
+        200:
+          description: Mensagens enviadas
+        400:
+          description: Requisição inválida
+        404:
+          description: Contato não encontrado
+        500:
+          description: Erro interno
+
+  /api/history/{contato}:
+    get:
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - Messages
+      summary: Lê histórico de conversa por identificador
+      parameters:
+        - in: path
+          name: contato
+          required: true
+          type: string
+          example: Marco Antonio
+      responses:
+        200:
+          description: Histórico retornado
+        400:
+          description: Contato inválido
+        404:
+          description: Contato não encontrado
+        500:
+          description: Erro interno
+
+  /api/history:
+    post:
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - Messages
+      summary: Lê histórico de conversa por identificador (body)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - contato
+            properties:
+              contato:
+                type: string
+                example: Marco Antonio
+      responses:
+        200:
+          description: Histórico retornado
+        400:
+          description: Contato inválido
+        404:
+          description: Contato não encontrado
+        500:
+          description: Erro interno

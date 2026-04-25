@@ -25,14 +25,22 @@ def getDataRef(self:"automation"):
         except NoSuchElementException:
             pass
 
-        # Procura o canvas do QR code sem depender de idioma exato do aria-label
-        canvas_QRCode = self.driver.find_element(
+        # Estratégia robusta: encontra qualquer container do QR com data-ref,
+        # sem depender de idioma/aria-label.
+        candidates = self.driver.find_elements(
+            By.XPATH, '//div[@data-ref and .//canvas]'
+        )
+        for parent in candidates:
+            data_ref = (parent.get_attribute("data-ref") or "").strip()
+            if data_ref:
+                return data_ref
+
+        # Fallback legado por aria-label contendo "QR".
+        canvas_qr = self.driver.find_element(
             By.XPATH, '//canvas[contains(@aria-label, "QR")]'
         )
-
-        parent = canvas_QRCode.find_element(By.XPATH, "./ancestor::div[@data-ref]")
-        data_ref = parent.get_attribute("data-ref")
-        return data_ref
+        parent = canvas_qr.find_element(By.XPATH, "./ancestor::div[@data-ref]")
+        return (parent.get_attribute("data-ref") or "").strip() or None
 
     except NoSuchElementException:
         return None

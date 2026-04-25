@@ -6,14 +6,16 @@ from datetime import datetime
 import questionary
 from questionary import Style
 
-CONFIG_FILE = "config.json"
-EULA_FILE = "eula.txt"
+CONFIG_FILE = os.getenv("CONFIG_FILE", "config.json")
+EULA_FILE = os.getenv("EULA_FILE", "eula.txt")
 EULA_ACCEPTED_MARKER = "## ACEITO ##"
 
 DEFAULT_CONFIG = {
     "gui": False,
     "modo": "bot",
     "api_port": 3000,
+    "webhook_url": "",
+    "api_key": "",
 }
 
 CLI_STYLE = Style([
@@ -28,16 +30,35 @@ CLI_STYLE = Style([
 ])
 
 
+def _normalize_file_path(path: str, fallback_name: str) -> str:
+    # Se receber um diretório por engano, grava arquivo dentro dele.
+    if os.path.isdir(path):
+        return os.path.join(path, fallback_name)
+    return path
+
+
+def _ensure_parent_dir(path: str):
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
 def load_config() -> dict:
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r") as f:
-            data = json.load(f)
-        return {**DEFAULT_CONFIG, **data}
+    path = _normalize_file_path(CONFIG_FILE, "config.json")
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+            return {**DEFAULT_CONFIG, **data}
+        except (json.JSONDecodeError, OSError):
+            return DEFAULT_CONFIG.copy()
     return DEFAULT_CONFIG.copy()
 
 
 def save_config(config: dict):
-    with open(CONFIG_FILE, "w") as f:
+    path = _normalize_file_path(CONFIG_FILE, "config.json")
+    _ensure_parent_dir(path)
+    with open(path, "w") as f:
         json.dump(config, f, indent=2)
 
 
@@ -57,8 +78,9 @@ def header(etapa: str = ""):
 
 
 def eula_foi_aceito() -> bool:
+    path = _normalize_file_path(EULA_FILE, "eula.txt")
     try:
-        with open(EULA_FILE, "r") as f:
+        with open(path, "r") as f:
             return EULA_ACCEPTED_MARKER in f.read()
     except FileNotFoundError:
         return False
@@ -66,7 +88,9 @@ def eula_foi_aceito() -> bool:
 
 def registrar_aceite():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open(EULA_FILE, "a") as f:
+    path = _normalize_file_path(EULA_FILE, "eula.txt")
+    _ensure_parent_dir(path)
+    with open(path, "a") as f:
         f.write(f"\n{EULA_ACCEPTED_MARKER}\n✅ Termos aceitos em {timestamp}\n")
 
 
@@ -77,8 +101,9 @@ def etapa_termos() -> bool:
 
     header("Termos de Uso")
 
-    if os.path.exists(EULA_FILE):
-        with open(EULA_FILE, "r") as f:
+    eula_path = _normalize_file_path(EULA_FILE, "eula.txt")
+    if os.path.exists(eula_path):
+        with open(eula_path, "r") as f:
             termos = f.read()
         # Exibe os termos paginados (60 linhas por vez)
         linhas = termos.splitlines()
@@ -193,6 +218,37 @@ def etapa_browser(config: dict) -> dict:
         return config
 
     config["gui"] = opcao.startswith("Visível")
+    save_config(config)
+    return config
+
+
+# ──────────────────────────────────────────
+#  Etapa API — api_key e webhook_url
+# ──────────────────────────────────────────
+def etapa_api_preferencias(config: dict) -> dict:
+    header("Configuração da API  →  Chave e Webhook")
+    print("  Defina as preferências da API.\n")
+    print("  • Ambos os campos são opcionais.")
+    print("  • Se deixar em branco, será salvo como string vazia.\n")
+
+    api_key = questionary.text(
+        "API Key (opcional):",
+        default=(config.get("api_key") or ""),
+        style=CLI_STYLE,
+    ).ask()
+    if api_key is None:
+        api_key = ""
+
+    webhook_url = questionary.text(
+        "Webhook URL (opcional):",
+        default=(config.get("webhook_url") or ""),
+        style=CLI_STYLE,
+    ).ask()
+    if webhook_url is None:
+        webhook_url = ""
+
+    config["api_key"] = api_key.strip()
+    config["webhook_url"] = webhook_url.strip()
     save_config(config)
     return config
 
@@ -313,6 +369,7 @@ def main():
         return
     config = load_config()
     config = etapa_browser(config)
+    config = etapa_api_preferencias(config)
     etapa_whatsapp(config)
 
 

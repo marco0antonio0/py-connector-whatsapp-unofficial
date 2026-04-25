@@ -1,0 +1,18 @@
+services:
+  whatsapp-bot:
+    build: .
+    container_name: whatsapp-bot
+    restart: unless-stopped
+    environment:
+      BOT_API_PORT: "3000"
+      NON_INTERACTIVE: "1"
+      CHROME_BIN: "/usr/bin/chromium"
+      CHROMEDRIVER_PATH: "/usr/bin/chromedriver"
+      CONFIG_FILE: "/app/state/config.json"
+      EULA_FILE: "/app/state/eula.txt"
+    ports:
+      - "3000:3000"
+    shm_size: "1gb"
+    volumes:
+      - ./dados:/app/dados
+      - ./state:/app/state

@@ -40,9 +40,8 @@ bash ./install.sh
 source .venv/bin/activate
 
 if [ "${1:-}" = "api" ]; then
-  echo "🚀 Executando api.py..."
-  python3 api.py
-else
-  echo "🚀 Executando main.py..."
-  python3 main.py
+  echo "ℹ️ O modo API agora está integrado ao main.py."
 fi
+
+echo "🚀 Executando main.py..."
+python3 main.py
