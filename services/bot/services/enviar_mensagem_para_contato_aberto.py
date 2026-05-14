@@ -12,8 +12,15 @@ if TYPE_CHECKING:
     from ..bot import automation
 
 
+def _normalize_for_chromedriver(texto: str) -> str:
+    # Evita erro "ChromeDriver only supports characters in the BMP".
+    # Remove caracteres fora de U+0000..U+FFFF (ex.: alguns emojis).
+    return "".join(ch for ch in str(texto) if ord(ch) <= 0xFFFF)
+
+
 def enviar_mensagem_para_contato_aberto(self: "automation", texto: str):
     try:
+        texto = _normalize_for_chromedriver(texto)
         print(f"✉️ Enviando mensagem: {texto}")
 
         seletores = [
@@ -68,7 +75,16 @@ def enviar_mensagem_para_contato_aberto(self: "automation", texto: str):
 
         try:
             campo_mensagem.click()
-            campo_mensagem.send_keys(texto)
+
+            # Preserva quebras de linha no WhatsApp:
+            # usa Shift+Enter entre linhas e Enter apenas ao final para enviar.
+            linhas = str(texto).split("\n")
+            for idx, linha in enumerate(linhas):
+                if linha:
+                    campo_mensagem.send_keys(linha)
+                if idx < len(linhas) - 1:
+                    campo_mensagem.send_keys(Keys.SHIFT + Keys.ENTER)
+
             campo_mensagem.send_keys(Keys.ENTER)
         except Exception:
             # Fallback para composer contenteditable quando send_keys falha em <p>
@@ -78,9 +94,9 @@ def enviar_mensagem_para_contato_aberto(self: "automation", texto: str):
                 const text = arguments[1];
                 el.focus();
                 if (el.isContentEditable) {
-                  document.execCommand('insertText', false, text);
+                  el.textContent = text;
                 } else {
-                  el.innerText = text;
+                  el.value = text;
                 }
                 """,
                 campo_mensagem,
